@@ -12,3 +12,5 @@ add_executable(${PROJECT_NAME} "main.cpp" "MediaControlClass.cpp" "AdapterContro
 target_link_libraries(${PROJECT_NAME} ${GLIB_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} ${GIO_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} dbus-1)
+
+install(TARGETS ${PROJECT_NAME} DESTINATION bin)
