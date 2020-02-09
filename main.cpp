@@ -1,4 +1,4 @@
-#include <string>
+#include <cstring>
 #include "MediaControlClass.h"
 #include "AdapterControlClass.h"
 

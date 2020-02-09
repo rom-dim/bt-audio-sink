@@ -1,3 +1,4 @@
+#include <cstring>
 #include "AdapterControlClass.h"
 
 using namespace std;
