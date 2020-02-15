@@ -30,7 +30,11 @@ void AdapterControlClass::SetPairable(bool state){
     HelperSetProperty("Pairable",g_variant_new("b", state));
 }
 
-AdapterControlClass *adapter;
+void AdapterControlClass::SetAlias(string alias){
+    HelperSetProperty("Pairable",g_variant_new("s", alias.c_str()));
+}
+
+static AdapterControlClass *adapter;
 
 void AdapterControlClass::bluez_device_appeared(GDBusConnection *sig,
                                                 const gchar *sender_name,
@@ -65,8 +69,9 @@ void AdapterControlClass::bluez_device_appeared(GDBusConnection *sig,
 
     g_variant_get(parameters, "(&oa{sa{sv}})", &object, &interfaces);
     while(g_variant_iter_next(interfaces, "{&s@a{sv}}", &interface_name, &properties)) {
-        if(g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "org.bluez.mediaitem1")) {
-            //g_print("[ %s ]\n", object);
+        //g_print("IFace [ %s ]\n", interface_name);
+        if(g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "org.bluez.mediaitem1") ||
+                g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "org.bluez.mediaplayer1" )) {
             const gchar *property_name;
             GVariantIter i;
             GVariant *prop_val;
@@ -78,12 +83,19 @@ void AdapterControlClass::bluez_device_appeared(GDBusConnection *sig,
                 if(*type== 's'  || *type == 'o'){
                     if(strcmp(property_name,"Player") == 0)
                     {
-                        player = std::string(g_variant_get_string(prop_val,NULL));
+                        player = std::string(g_variant_get_string(prop_val,nullptr));
                         path= std::string(object);
                     }
                     else if(strcmp(property_name,"Type") == 0)
                     {
-                        player_type = std::string(g_variant_get_string(prop_val,NULL));
+                        player_type = std::string(g_variant_get_string(prop_val,nullptr));
+                        found=true;
+                    }
+                    else if(strcmp(property_name,"Device") == 0)
+                    {
+                        player = std::string(g_variant_get_string(prop_val,nullptr));
+                        path= std::string(object);
+                        player_type= std::string("fallback");
                         found=true;
                     }
                 }
@@ -104,12 +116,12 @@ void AdapterControlClass::bluez_device_appeared(GDBusConnection *sig,
 }
 
 void AdapterControlClass::bluez_device_disappeared(GDBusConnection *sig,
-                                     const gchar *sender_name,
-                                     const gchar *object_path,
-                                     const gchar *interface,
-                                     const gchar *signal_name,
-                                     GVariant *parameters,
-                                     gpointer user_data)
+                                                   const gchar *sender_name,
+                                                   const gchar *object_path,
+                                                   const gchar *interface,
+                                                   const gchar *signal_name,
+                                                   GVariant *parameters,
+                                                   gpointer user_data)
 {
     (void)sig;
     (void)sender_name;
@@ -120,16 +132,16 @@ void AdapterControlClass::bluez_device_disappeared(GDBusConnection *sig,
     GVariantIter *interfaces;
     const char *object;
     const gchar *interface_name;
-    GVariant *properties;
-
     std::string player;
     bool found=false;
 
     g_variant_get(parameters, "(&oas)", &object, &interfaces);
     while(g_variant_iter_next(interfaces, "s", &interface_name)) {
-        if(g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "org.bluez.mediaitem1")) {
-            found = true;
+        if(g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "org.bluez.mediaitem1") ||
+                g_strstr_len(g_ascii_strdown(interface_name, -1), -1, "org.bluez.mediaplayer1")) {
+
             player=string(object);
+            found = true;
         }
     }
 
@@ -142,27 +154,27 @@ void AdapterControlClass::bluez_device_disappeared(GDBusConnection *sig,
 
 
 void AdapterControlClass::RegisterMainLoop(GMainLoop *loop){
-    guint iface_added = g_dbus_connection_signal_subscribe(con,
-                                                           "org.bluez",
-                                                           "org.freedesktop.DBus.ObjectManager",
-                                                           "InterfacesAdded",
-                                                           NULL,
-                                                           NULL,
-                                                           G_DBUS_SIGNAL_FLAGS_NONE,
-                                                           bluez_device_appeared,
-                                                           loop,
-                                                           NULL);
+    g_dbus_connection_signal_subscribe(con,
+                                       "org.bluez",
+                                       "org.freedesktop.DBus.ObjectManager",
+                                       "InterfacesAdded",
+                                       nullptr,
+                                       nullptr,
+                                       G_DBUS_SIGNAL_FLAGS_NONE,
+                                       bluez_device_appeared,
+                                       loop,
+                                       nullptr);
 
-    guint iface_removed = g_dbus_connection_signal_subscribe(con,
-                                                             "org.bluez",
-                                                             "org.freedesktop.DBus.ObjectManager",
-                                                             "InterfacesRemoved",
-                                                             NULL,
-                                                             NULL,
-                                                             G_DBUS_SIGNAL_FLAGS_NONE,
-                                                             bluez_device_disappeared,
-                                                             loop,
-                                                             NULL);
+    g_dbus_connection_signal_subscribe(con,
+                                       "org.bluez",
+                                       "org.freedesktop.DBus.ObjectManager",
+                                       "InterfacesRemoved",
+                                       nullptr,
+                                       nullptr,
+                                       G_DBUS_SIGNAL_FLAGS_NONE,
+                                       bluez_device_disappeared,
+                                       loop,
+                                       nullptr);
     adapter = this;
 }
 

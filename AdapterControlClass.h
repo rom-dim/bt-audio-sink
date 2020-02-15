@@ -12,6 +12,7 @@ public:
     void SetPowered(bool state);
     void SetDiscoverable(bool state);
     void SetPairable(bool state);
+    void SetAlias(std::string alias);
 
     void RegisterMainLoop(GMainLoop *loop);
 
