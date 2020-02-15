@@ -6,20 +6,20 @@ MediaPlayerClass::MediaPlayerClass(GDBusConnection *con, string path):con(con),p
 
 int MediaPlayerClass::Helper(std::string method){
     GVariant *result;
-    GError *error = NULL;
+    GError *error = nullptr;
 
     result = g_dbus_connection_call_sync(con,
-                         "org.bluez",
-                         path.c_str(),
-                         "org.bluez.MediaPlayer1",
-                         method.c_str(),
-                         NULL,
-                         NULL,
-                         G_DBUS_CALL_FLAGS_NONE,
-                         -1,
-                         NULL,
-                         &error);
-    if(error != NULL)
+                                         "org.bluez",
+                                         path.c_str(),
+                                         "org.bluez.MediaPlayer1",
+                                         method.c_str(),
+                                         nullptr,
+                                         nullptr,
+                                         G_DBUS_CALL_FLAGS_NONE,
+                                         -1,
+                                         nullptr,
+                                         &error);
+    if(error != nullptr)
         return 1;
 
     g_variant_unref(result);
