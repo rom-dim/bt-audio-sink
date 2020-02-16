@@ -19,8 +19,10 @@ int MediaPlayerClass::Helper(std::string method){
                                          -1,
                                          nullptr,
                                          &error);
-    if(error != nullptr)
+    if(error != nullptr){
+        g_print("Error %s\n", error->message);
         return 1;
+    }
 
     g_variant_unref(result);
     return 0;
@@ -40,4 +42,8 @@ void MediaPlayerClass::Next(){
 
 void MediaPlayerClass::Stop(){
     Helper("Stop");
+}
+
+void MediaPlayerClass::Pause(){
+    Helper("Pause");
 }

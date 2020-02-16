@@ -13,6 +13,7 @@ public:
     void Play();
     void Next();
     void Stop();
+    void Pause();
 
 private:
     GDBusConnection *con;

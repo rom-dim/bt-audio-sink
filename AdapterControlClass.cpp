@@ -5,13 +5,13 @@ using namespace std;
 
 guint mediaPlayerAddId = g_signal_new("signal_media_player_add",
                                       G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
-                                      0, NULL, NULL,
+                                      0, nullptr, nullptr,
                                       g_cclosure_marshal_generic,
                                       G_TYPE_NONE, 4, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,G_TYPE_POINTER);
 
 guint mediaPlayerRemoveId = g_signal_new("signal_media_player_remove",
                                          G_TYPE_OBJECT, G_SIGNAL_RUN_FIRST,
-                                         0, NULL, NULL,
+                                         0, nullptr, nullptr,
                                          g_cclosure_marshal_generic,
                                          G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_POINTER);
 
@@ -31,7 +31,7 @@ void AdapterControlClass::SetPairable(bool state){
 }
 
 void AdapterControlClass::SetAlias(string alias){
-    HelperSetProperty("Pairable",g_variant_new("s", alias.c_str()));
+    HelperSetProperty("Alias",g_variant_new("s", alias.c_str()));
 }
 
 static AdapterControlClass *adapter;
@@ -180,21 +180,23 @@ void AdapterControlClass::RegisterMainLoop(GMainLoop *loop){
 
 int AdapterControlClass::Helper(std::string method){
     GVariant *result;
-    GError *error = NULL;
+    GError *error = nullptr;
 
     result = g_dbus_connection_call_sync(con,
                                          "org.bluez",
                                          path.c_str(),
                                          "org.bluez.Adapter1",
                                          method.c_str(),
-                                         NULL,
-                                         NULL,
+                                         nullptr,
+                                         nullptr,
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
-                                         NULL,
+                                         nullptr,
                                          &error);
-    if(error != NULL)
+    if(error != nullptr){
+        g_print("Error %s\n", error->message);
         return 1;
+    }
 
     g_variant_unref(result);
     return 0;
@@ -202,7 +204,7 @@ int AdapterControlClass::Helper(std::string method){
 
 int AdapterControlClass::HelperSetProperty(string prop, GVariant *value){
     GVariant *result;
-    GError *error = NULL;
+    GError *error = nullptr;
 
     result = g_dbus_connection_call_sync(con,
                                          "org.bluez",
@@ -210,13 +212,15 @@ int AdapterControlClass::HelperSetProperty(string prop, GVariant *value){
                                          "org.freedesktop.DBus.Properties",
                                          "Set",
                                          g_variant_new("(ssv)", "org.bluez.Adapter1", prop.c_str(), value),
-                                         NULL,
+                                         nullptr,
                                          G_DBUS_CALL_FLAGS_NONE,
                                          -1,
-                                         NULL,
+                                         nullptr,
                                          &error);
-    if(error != NULL)
+    if(error != nullptr){
+        g_print("Error %s\n", error->message);
         return 1;
+    }
 
     g_variant_unref(result);
     return 0;
