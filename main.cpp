@@ -2,37 +2,55 @@
 #include "MediaControlClass.h"
 #include "AdapterControlClass.h"
 #include "DeviceClass.h"
+#include "CarControl.h"
 
 static GDBusConnection *con;
 static std::string player;
+bool NeedToStopPlayer = false;
+bool PlayerIsRunning = false;
 
 GThread *th_console;
 
-void *player_thread(gpointer data) {
-    MediaPlayerClass p(con,player);
-    while(true)
+void myButtonCallback(struct SteeringWheelButtons buttons, void *userdata){
+    static unsigned char counter = 0;
+    MediaPlayerClass *p = (MediaPlayerClass*)userdata;
+
+    if(buttons.Up){
+        g_print("%3d : Next\n", counter);
+        p->Next();
+    }else if(buttons.Down){
+        g_print("%3d : Previous\n", counter);
+        p->Previous();
+    }else
     {
-        g_print("Enter character: ");
-        switch(getchar())
-        {
-        case 'q':  g_main_loop_quit((GMainLoop *)data); return nullptr;
-        case 'p': p.Play(); break;
-        case 'a': p.Pause(); break;
-        case 'n': p.Next(); break;
-        case 'b': p.Previous(); break;
-        case 's': p.Stop(); break;
-        default: break;
-        }
-        g_print("\n");
+        g_print("%3d : %X\n", counter,*((uint16_t*)&buttons));
     }
+    counter++;
+}
+
+void * player_thread(gpointer data) {
+    NeedToStopPlayer = false;
+    PlayerIsRunning = true;
+    string port("can0");
+    g_print("Start player %s\n", port.c_str());
+    MediaPlayerClass p(con,player);
+    CarController cc;
+    cc.addButtonHandler(myButtonCallback);
+    cc.open(port.c_str());
+    cc.run(&p ,&NeedToStopPlayer);
+    PlayerIsRunning = false;
+    NeedToStopPlayer = false;
+    g_print("End player\n");
+
+    return nullptr;
 }
 
 void StartMediaPlayer(void* ,const char* path,const char* media, const char* type, gpointer main_loop)
 {
-    g_print("registred path : %s\n",path);
-    g_print("registred media : %s\n",media);
-    g_print("registred type : %s\n",type);
-    if(th_console != nullptr)
+    //g_print("registred path : %s\n",path);
+    //g_print("registred media : %s\n",media);
+    //g_print("registred type : %s\n",type);
+    if(PlayerIsRunning)
     {
         g_print("Only one player can be started\n");
         return;
@@ -40,22 +58,19 @@ void StartMediaPlayer(void* ,const char* path,const char* media, const char* typ
 
     if(strcmp(type,"audio") == 0)
     {
-        g_print("StartMediaPlayer : %s\n",path);
         player =std::string(media);
         th_console = g_thread_new(path,player_thread,main_loop);
     }
 
     if(strcmp(type,"fallback") == 0)
     {
-        g_print("StartMediaPlayer : %s\n",path);
         player =std::string(path);
         th_console = g_thread_new(path,player_thread,main_loop);
     }
 }
 
 void StopMediaPlayer(void* ,const char* path, gpointer /*main_loop*/){
-    g_print("StopMediaPlayer : %s\n",path);
-    g_print("TODO : Stop player thread for device %s\n",path);
+    NeedToStopPlayer = true;
 }
 
 #define AGENT_PATH  "/org/bluez/AutoPinAgent"
@@ -117,7 +132,7 @@ static void bluez_signal_device_changed(GDBusConnection *conn,
     GVariant *value = nullptr;
     const gchar *signature = g_variant_get_type_string(params);
 
-    g_print("org.bluez.Device1 : %s\n", path);
+    //g_print("org.bluez.Device1 : %s\n", path);
 
     if(strcmp(signature, "(sa{sv}as)") != 0) {
         g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
@@ -126,15 +141,14 @@ static void bluez_signal_device_changed(GDBusConnection *conn,
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while(g_variant_iter_next(properties, "{&sv}", &key, &value)) {
-        g_print("\tProperty: %s\n",key);
+        //g_print("\tProperty: %s\n",key);
         if(g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN)) {
-            g_print("\tValue :\"%s\"\n", g_variant_get_boolean(value) ? "true" : "false");
+            //g_print("\tValue :\"%s\"\n", g_variant_get_boolean(value) ? "true" : "false");
         }
 
         if(!g_strcmp0(key, "Connected")) {
             if(!g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN)) {
-                g_print("Invalid argument type for %s: %s != %s", key,
-                        g_variant_get_type_string(value), "b");
+                g_print("Invalid argument type for %s: %s != %s", key, g_variant_get_type_string(value), "b");
                 goto done;
             }
             if(g_variant_get_boolean(value)){
@@ -167,7 +181,7 @@ static void bluez_adapter_changed(GDBusConnection */*conn*/,
     GVariant *value = nullptr;
     const gchar *signature = g_variant_get_type_string(params);
 
-    g_print("org.bluez.Adapter1 : %s\n", path);
+    //g_print("org.bluez.Adapter1 : %s\n", path);
 
     if(strcmp(signature, "(sa{sv}as)") != 0) {
         g_print("Invalid signature for %s: %s != %s", signal, signature, "(sa{sv}as)");
@@ -176,9 +190,9 @@ static void bluez_adapter_changed(GDBusConnection */*conn*/,
 
     g_variant_get(params, "(&sa{sv}as)", &iface, &properties, &unknown);
     while(g_variant_iter_next(properties, "{&sv}", &key, &value)) {
-        g_print("\tProperty: %s\n",key);
+        //g_print("\tProperty: %s\n",key);
         if(g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN)) {
-            g_print("\tValue :\"%s\"\n", g_variant_get_boolean(value) ? "true" : "false");
+            //g_print("\tValue :\"%s\"\n", g_variant_get_boolean(value) ? "true" : "false");
         }
     }
 done:
